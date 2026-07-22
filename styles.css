@@ -178,14 +178,38 @@ body {
 }
 
 .secondary-button {
-    background: white;
-    color: var(--navy);
+    background: #4EFD54;
+    color: #103314;
 }
 
 .cta-button:hover,
 .secondary-button:hover,
 .quote-form button:hover {
     transform: translateY(-1px);
+}
+
+.quote-form button:disabled,
+.quote-form button[disabled] {
+    background: linear-gradient(135deg, #b8c4d3, #8d9bad);
+    color: #f7f9fc;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.78;
+    transform: none;
+    filter: grayscale(0.15);
+}
+
+.quote-form button:disabled:hover,
+.quote-form button[disabled]:hover {
+    transform: none;
+}
+
+.quote-form-note {
+    margin: 0.85rem 0 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #5f6f81;
+    text-align: center;
 }
 
 .hero-highlights {
@@ -811,5 +835,99 @@ footer {
 
     .quote-form>* {
         grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 759px) {
+    .site-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+    }
+
+    .brand {
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 0.7rem;
+        padding-right: 0.25rem;
+    }
+
+    .brand-name {
+        font-size: 0.88rem;
+        line-height: 1.15;
+    }
+
+    .brand-tag {
+        font-size: 0.7rem;
+        line-height: 1.2;
+    }
+
+    .brand-mark {
+        width: 46px;
+        height: 46px;
+    }
+
+    .header-actions {
+        display: contents;
+    }
+
+    .language-toggle {
+        order: 2;
+        flex-shrink: 0;
+    }
+
+    .phone-pill {
+        order: 3;
+        width: 100%;
+        flex-basis: 100%;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .language-toggle {
+        margin-left: auto;
+    }
+
+    .hero {
+        padding: 2.75rem 1rem 2.5rem;
+    }
+
+    .quote-form-card,
+    .services-section,
+    .service-camera-section,
+    .results-section,
+    .process-section,
+    .trust-factors {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .quote-form-card {
+        padding-top: 1rem;
+    }
+
+    .quote-form,
+    .form-intro,
+    .services-list-box,
+    .service-camera-content,
+    .result-card,
+    .process-card,
+    .testimonial-card {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .quote-form,
+    .service-camera-content,
+    .result-card,
+    .process-card,
+    .testimonial-card {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .value-proposition {
+        padding-top: 2rem;
     }
 }

@@ -2,6 +2,10 @@ const languageButtons = document.querySelectorAll('.lang-option');
 const translatableText = document.querySelectorAll('[data-en][data-fr]');
 const translatablePlaceholders = document.querySelectorAll('[data-placeholder-en][data-placeholder-fr]');
 const translatableOptions = document.querySelectorAll('option[data-en][data-fr]');
+const issueLocationSelect = document.querySelector('#issue-location');
+const issueTypeSelect = document.querySelector('#issue-type');
+const problemDescriptionField = document.querySelector('#problem-description');
+const problemDescriptionLabel = document.querySelector('label[for="problem-description"]');
 
 function applyLanguage(lang) {
     document.documentElement.lang = lang;
@@ -25,6 +29,14 @@ function applyLanguage(lang) {
     });
 }
 
+function updateProblemDescriptionRequirement() {
+    const needsDescription = issueLocationSelect.value === 'other-location' || issueTypeSelect.value === 'other-issue';
+
+    problemDescriptionField.required = needsDescription;
+    problemDescriptionField.setAttribute('aria-required', String(needsDescription));
+    problemDescriptionLabel.classList.toggle('required', needsDescription);
+}
+
 languageButtons.forEach((button) => {
     button.addEventListener('click', () => {
         const lang = button.textContent === 'FR' ? 'fr' : 'en';
@@ -32,4 +44,8 @@ languageButtons.forEach((button) => {
     });
 });
 
+issueLocationSelect.addEventListener('change', updateProblemDescriptionRequirement);
+issueTypeSelect.addEventListener('change', updateProblemDescriptionRequirement);
+
 applyLanguage('fr');
+updateProblemDescriptionRequirement();
