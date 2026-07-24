@@ -6,6 +6,14 @@ const issueLocationSelect = document.querySelector('#issue-location');
 const issueTypeSelect = document.querySelector('#issue-type');
 const problemDescriptionField = document.querySelector('#problem-description');
 const problemDescriptionLabel = document.querySelector('label[for="problem-description"]');
+const quoteForm = document.querySelector('.quote-form');
+const fullNameField = document.querySelector('#full-name');
+const phoneNumberField = document.querySelector('#phone-number');
+const addressField = document.querySelector('#address');
+const suiteField = document.querySelector('#suite');
+const postalCodeField = document.querySelector('#postal-code');
+const emailField = document.querySelector('#email');
+const apiBaseUrlMeta = document.querySelector('meta[name="cdbf664c-92d0-4970-a7cc-e44d271d4f5b"]');
 const serviceItems = document.querySelectorAll('.services-list li');
 const serviceImage = document.querySelector('#service-list-image');
 const serviceRotationDelayMs = 5000;
@@ -22,6 +30,7 @@ const resultComparisons = [
     {
         labelEn: 'Blocked sink',
         labelFr: 'Évier bouché',
+        fitMode: 'cover',
         before: {
             titleEn: 'Before',
             titleFr: 'Avant',
@@ -33,23 +42,25 @@ const resultComparisons = [
             imageSrc: 'files/backed_up_sink_after.png',
         },
     },
-    // {
-    //     labelEn: 'Basement drain backup',
-    //     labelFr: 'Refoulement de drain au sous-sol',
-    //     before: {
-    //         titleEn: 'Before',
-    //         titleFr: 'Avant',
-    //         imageSrc: 'files/backed_up_sink_before.png',
-    //     },
-    //     after: {
-    //         titleEn: 'After',
-    //         titleFr: 'Après',
-    //         imageSrc: 'files/backed_up_sink_after.png',
-    //     },
-    // },
+    {
+        labelEn: 'Basement drain backup',
+        labelFr: 'Refoulement de drain au sous-sol',
+        fitMode: 'contain',
+        before: {
+            titleEn: 'Before',
+            titleFr: 'Avant',
+            imageSrc: 'files/backed_up_drain_before.png',
+        },
+        after: {
+            titleEn: 'After',
+            titleFr: 'Après',
+            imageSrc: 'files/backed_up_drain_after.png',
+        },
+    },
     {
         labelEn: 'Main line obstruction',
         labelFr: 'Obstruction de la conduite principale',
+        fitMode: 'cover',
         before: {
             titleEn: 'Before',
             titleFr: 'Avant',
@@ -128,9 +139,12 @@ function updateResultCard(card, comparison, side) {
     const comparisonLabel = currentLanguage === 'fr' ? comparison.labelFr : comparison.labelEn;
     const titleText = currentLanguage === 'fr' ? entry.titleFr : entry.titleEn;
     const imageSource = entry.imageSrc;
+    const fitMode = comparison.fitMode || 'cover';
 
     visual.classList.toggle('before', side === 'before');
     visual.classList.toggle('after', side === 'after');
+    visual.classList.toggle('fit-cover', fitMode === 'cover');
+    visual.classList.toggle('fit-contain', fitMode === 'contain');
 
     image.src = imageSource;
     image.alt = `${titleText} - ${comparisonLabel}`;
@@ -222,6 +236,86 @@ function updateProblemDescriptionRequirement() {
     problemDescriptionLabel.classList.toggle('required', needsDescription);
 }
 
+function getSelectedOptionText(selectElement) {
+    if (!selectElement) {
+        return '';
+    }
+
+    const selectedOption = selectElement.selectedOptions && selectElement.selectedOptions[0];
+    return selectedOption ? selectedOption.textContent.trim() : '';
+}
+
+function getApiBaseUrl() {
+    const configuredBaseUrl = (apiBaseUrlMeta?.content || '').trim();
+
+    if (configuredBaseUrl) {
+        return configuredBaseUrl.replace(/\/$/, '');
+    }
+
+    return window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+}
+
+async function submitQuoteForm(event) {
+    event.preventDefault();
+
+    const fullName = fullNameField?.value.trim() || '';
+    const phoneNumber = phoneNumberField?.value.trim() || '';
+    const address = addressField?.value.trim() || '';
+    const suite = suiteField?.value.trim() || '';
+    const postalCode = postalCodeField?.value.trim() || '';
+    const contactEmail = emailField?.value.trim() || '';
+    const issueLocation = getSelectedOptionText(issueLocationSelect);
+    const issueType = getSelectedOptionText(issueTypeSelect);
+    const problemDescription = problemDescriptionField?.value.trim() || '';
+    const apiUrl = `${getApiBaseUrl()}/api/send-quote`;
+
+    const submitButton = quoteForm?.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton ? submitButton.textContent : '';
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Sending...';
+    }
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                fullName,
+                phoneNumber,
+                email: contactEmail,
+                address,
+                suite,
+                postalCode,
+                issueLocation,
+                issueType,
+                issueLocationLabel: issueLocation,
+                issueTypeLabel: issueType,
+                problemDescription,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.error || 'Unable to send email');
+        }
+
+        window.alert('Your quote request has been sent.');
+        quoteForm.reset();
+        updateProblemDescriptionRequirement();
+    } catch (error) {
+        window.alert(`Could not send the email request: ${error.message}`);
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+        }
+    }
+}
+
 languageButtons.forEach((button) => {
     button.addEventListener('click', () => {
         const lang = button.textContent === 'FR' ? 'fr' : 'en';
@@ -231,6 +325,10 @@ languageButtons.forEach((button) => {
 
 issueLocationSelect.addEventListener('change', updateProblemDescriptionRequirement);
 issueTypeSelect.addEventListener('change', updateProblemDescriptionRequirement);
+
+if (quoteForm) {
+    quoteForm.addEventListener('submit', submitQuoteForm);
+}
 
 serviceItems.forEach((item) => {
     item.setAttribute('role', 'button');

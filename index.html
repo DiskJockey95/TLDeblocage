@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TL Déblocage</title>
     <link rel="icon" type="image/png" href="files/thumbnail_logo.png">
+    <meta name="cdbf664c-92d0-4970-a7cc-e44d271d4f5b" content="https://your-railway-app.up.railway.app/api/send-quote">
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -80,18 +81,33 @@
                     </div>
                 </div>
 
-                <div class="form-row">
+                 <div class="form-row">
                     <div class="form-field">
-                        <label class="field-label required" for="email" data-en="Email"
-                            data-fr="Courriel">Courriel</label>
-                        <input id="email" type="email" name="email" placeholder="Courriel"
-                            data-placeholder-en="email@domain.com" data-placeholder-fr="email@domain.com" required>
+                        <label class="field-label required" for="address" data-en="Address"
+                            data-fr="Adresse">Adresse</label>
+                        <input id="address" type="text" name="address" placeholder="Adresse"
+                            data-placeholder-en="123 Main St" data-placeholder-fr="123 rue Principale" required>
                     </div>
+                    <div class="form-field">
+                        <label class="field-label" for="suite" data-en="Suite (optional)"
+                            data-fr="Suite (facultatif)">Suite (facultatif)</label>
+                        <input id="suite" type="text" name="suite" placeholder="Suite (facultatif)"
+                            data-placeholder-en="Suite, unit, apt." data-placeholder-fr="Suite, unité, app.">
+                    </div>
+                </div>
+
+                <div class="form-row">
                     <div class="form-field">
                         <label class="field-label required" for="postal-code" data-en="Postal Code"
                             data-fr="Code postal">Code postal</label>
                         <input id="postal-code" type="text" name="postal-code" placeholder="H1H 1H1"
                             data-placeholder-en="H1H 1H1" data-placeholder-fr="H1H 1H1" required>
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label required" for="email" data-en="Email"
+                            data-fr="Courriel">Courriel</label>
+                        <input id="email" type="email" name="email" placeholder="Courriel"
+                            data-placeholder-en="email@domain.com" data-placeholder-fr="email@domain.com" required>
                     </div>
                 </div>
 
@@ -135,15 +151,8 @@
                         placeholder="Décrivez brièvement le problème" data-placeholder-en="Briefly describe the problem"
                         data-placeholder-fr="Décrivez brièvement le problème"></textarea>
                 </div>
-                <!-- <button type="submit" disabled data-en="Get A Free Quote" data-fr="Obtenir une soumission gratuite">Obtenir ma soumission
-                    gratuite</button> -->
-                <button type="submit" disabled data-en="Temporarily Unavailable"
-                    data-fr="Temporairement indisponible">Temporairement indisponible</button>
-                <p class="quote-form-note"
-                    data-en="Online quote requests are temporarily unavailable while this form is under construction. Please call us instead."
-                    data-fr="Les demandes de soumission en ligne sont temporairement indisponibles pendant la construction de ce formulaire. Veuillez nous appeler à la place.">
-                    Les demandes de soumission en ligne sont temporairement indisponibles pendant la construction de ce
-                    formulaire. Veuillez nous appeler à la place.</p>
+                <button type="submit" data-en="Get A Free Quote" data-fr="Obtenir une soumission gratuite">Obtenir ma soumission
+                    gratuite</button>
             </form>
         </section>
 

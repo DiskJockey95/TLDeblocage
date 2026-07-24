@@ -343,7 +343,8 @@ body {
 .service-list-media img {
     width: 100%;
     aspect-ratio: 4 / 3;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     border-radius: 16px;
     display: block;
 }
@@ -597,8 +598,17 @@ body {
 .result-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
     display: block;
+}
+
+.result-visual.fit-cover .result-image {
+    object-fit: cover;
+    object-position: center;
+}
+
+.result-visual.fit-contain .result-image {
+    object-fit: contain;
+    object-position: center;
 }
 
 .sink-illustration {
