@@ -72,6 +72,21 @@ const resultComparisons = [
             imageSrc: 'files/backed_up_mainline_after.png',
         },
     },
+    {
+        labelEn: 'Backed up bathtub',
+        labelFr: 'Baignoire bouchée',
+        fitMode: 'cover',
+        before: {
+            titleEn: 'Before',
+            titleFr: 'Avant',
+            imageSrc: 'files/backed_up_bathtub_before.png',
+        },
+        after: {
+            titleEn: 'After',
+            titleFr: 'Après',
+            imageSrc: 'files/backed_up_bathtub_after.png',
+        },
+    },
 ];
 
 function escapeHtml(value) {
