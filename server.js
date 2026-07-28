@@ -48,6 +48,9 @@ function createTransporter() {
         host: process.env.SMTP_HOST,
         port: portNumber,
         secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true' || portNumber === 465,
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 15000,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
@@ -83,6 +86,13 @@ app.post('/api/send-quote', async (request, response) => {
     const requiredFields = ['fullName', 'phoneNumber', 'email', 'address', 'postalCode', 'issueLocation', 'issueType'];
     const missingField = requiredFields.find((field) => !String(formData[field] || '').trim());
 
+    console.log('Received quote request', {
+        requestId: request.headers['x-railway-request-id'] || null,
+        email: formData.email || null,
+        issueType: formData.issueType || null,
+        issueLocation: formData.issueLocation || null,
+    });
+
     if (missingField) {
         response.status(400).json({ error: `Missing required field: ${missingField}` });
         return;
@@ -100,6 +110,7 @@ app.post('/api/send-quote', async (request, response) => {
     const senderName = process.env.MAIL_FROM_NAME || 'TL Déblocage No-Reply';
 
     try {
+        console.log('Sending mail via SMTP');
         await transporter.sendMail({
             from: {
                 name: senderName,
@@ -121,8 +132,10 @@ app.post('/api/send-quote', async (request, response) => {
                 .join(''),
         });
 
+        console.log('Mail sent successfully');
         response.json({ ok: true });
     } catch (error) {
+        console.error('SMTP send failed', error);
         response.status(500).json({ error: 'Unable to send email.', details: error.message });
     }
 });
