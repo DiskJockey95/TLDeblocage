@@ -1,5 +1,5 @@
 const express = require('express');
-const nodemailer = require('nodemailer');
+const https = require('https');
 const path = require('path');
 require('dotenv').config();
 
@@ -9,6 +9,14 @@ const allowedOrigins = (process.env.CORS_ORIGIN || '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+function isLocalOrigin(origin) {
+    return origin === 'null'
+        || origin === 'http://localhost:3000'
+        || origin === 'http://127.0.0.1:3000'
+        || origin === 'http://localhost'
+        || origin === 'http://127.0.0.1';
+}
 
 function buildMapsLink(address, postalCode) {
     const encodedParts = [address, postalCode]
@@ -41,30 +49,61 @@ function buildEmailMessage(formData) {
     ].join('\n');
 }
 
-function createTransporter() {
-    const portNumber = Number(process.env.SMTP_PORT || 587);
+function sendEmailViaResend(payload) {
+    return new Promise((resolve, reject) => {
+        const requestBody = JSON.stringify(payload);
 
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: portNumber,
-        secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true' || portNumber === 465,
-        connectionTimeout: 15000,
-        greetingTimeout: 15000,
-        socketTimeout: 15000,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-        },
+        const request = https.request(
+            {
+                hostname: 'api.resend.com',
+                path: '/emails',
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(requestBody),
+                    Accept: 'application/json',
+                },
+                timeout: 15000,
+            },
+            (response) => {
+                let responseBody = '';
+
+                response.setEncoding('utf8');
+                response.on('data', (chunk) => {
+                    responseBody += chunk;
+                });
+
+                response.on('end', () => {
+                    if (response.statusCode >= 200 && response.statusCode < 300) {
+                        resolve({ statusCode: response.statusCode, body: responseBody });
+                        return;
+                    }
+
+                    reject(new Error(`Resend request failed with status ${response.statusCode}: ${responseBody}`));
+                });
+            }
+        );
+
+        request.on('timeout', () => {
+            request.destroy(new Error('Resend request timed out'));
+        });
+
+        request.on('error', reject);
+        request.write(requestBody);
+        request.end();
     });
 }
 
 app.use(express.json());
 app.use((request, response, next) => {
     const requestOrigin = request.headers.origin;
+    const originAllowed = Boolean(requestOrigin)
+        && (allowedOrigins.includes(requestOrigin) || isLocalOrigin(requestOrigin));
 
-    if (!allowedOrigins.length) {
+    if (!requestOrigin) {
         response.setHeader('Access-Control-Allow-Origin', '*');
-    } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    } else if (originAllowed) {
         response.setHeader('Access-Control-Allow-Origin', requestOrigin);
         response.setHeader('Vary', 'Origin');
     }
@@ -98,26 +137,20 @@ app.post('/api/send-quote', async (request, response) => {
         return;
     }
 
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        response.status(500).json({ error: 'SMTP environment variables are not configured.' });
+    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM) {
+        response.status(500).json({ error: 'Resend environment variables are not configured.' });
         return;
     }
 
-    const transporter = createTransporter();
     const subject = `${formData.issueTypeLabel || formData.issueType} - ${formData.issueLocationLabel || formData.issueLocation}`;
     const messageText = buildEmailMessage(formData);
-    const senderAddress = process.env.MAIL_FROM || process.env.SMTP_USER;
-    const senderName = process.env.MAIL_FROM_NAME || 'TL Déblocage No-Reply';
 
     try {
-        console.log('Sending mail via SMTP');
-        await transporter.sendMail({
-            from: {
-                name: senderName,
-                address: senderAddress,
-            },
+        console.log('Sending mail via Resend');
+        await sendEmailViaResend({
+            from: process.env.RESEND_FROM,
             to: 'tldeblocage@gmail.com',
-            replyTo: formData.email,
+            reply_to: formData.email,
             subject,
             text: messageText,
             html: messageText
@@ -135,7 +168,7 @@ app.post('/api/send-quote', async (request, response) => {
         console.log('Mail sent successfully');
         response.json({ ok: true });
     } catch (error) {
-        console.error('SMTP send failed', error);
+        console.error('Resend send failed', error);
         response.status(500).json({ error: 'Unable to send email.', details: error.message });
     }
 });

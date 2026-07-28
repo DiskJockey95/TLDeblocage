@@ -261,13 +261,21 @@ function getSelectedOptionText(selectElement) {
 }
 
 function getApiBaseUrl() {
+    const isLocalEnvironment = window.location.protocol === 'file:'
+        || window.location.hostname === 'localhost'
+        || window.location.hostname === '127.0.0.1';
+
+    if (isLocalEnvironment) {
+        return 'http://localhost:3000';
+    }
+
     const configuredBaseUrl = (apiBaseUrlMeta?.content || '').trim();
 
     if (configuredBaseUrl) {
         return configuredBaseUrl.replace(/\/$/, '');
     }
 
-    return window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+    return '';
 }
 
 function getSendQuoteUrl() {
