@@ -13,7 +13,7 @@ const addressField = document.querySelector('#address');
 const suiteField = document.querySelector('#suite');
 const postalCodeField = document.querySelector('#postal-code');
 const emailField = document.querySelector('#email');
-const apiBaseUrlMeta = document.querySelector('meta[name="cdbf664c-92d0-4970-a7cc-e44d271d4f5b"]');
+const apiBaseUrlMeta = document.querySelector('meta[name="send-quote-url"]');
 const serviceItems = document.querySelectorAll('.services-list li');
 const serviceImage = document.querySelector('#service-list-image');
 const serviceRotationDelayMs = 5000;
@@ -283,6 +283,11 @@ async function submitQuoteForm(event) {
     const issueType = getSelectedOptionText(issueTypeSelect);
     const problemDescription = problemDescriptionField?.value.trim() || '';
     const apiUrl = `${getApiBaseUrl()}/api/send-quote`;
+
+    if (!getApiBaseUrl()) {
+        window.alert('Missing API URL. Please contact the site administrator.');
+        return;
+    }
 
     const submitButton = quoteForm?.querySelector('button[type="submit"]');
     const originalButtonText = submitButton ? submitButton.textContent : '';
