@@ -270,6 +270,16 @@ function getApiBaseUrl() {
     return window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
 }
 
+function getSendQuoteUrl() {
+    const apiBaseUrl = getApiBaseUrl();
+
+    if (!apiBaseUrl) {
+        return '';
+    }
+
+    return apiBaseUrl.endsWith('/api/send-quote') ? apiBaseUrl : `${apiBaseUrl}/api/send-quote`;
+}
+
 async function submitQuoteForm(event) {
     event.preventDefault();
 
@@ -282,9 +292,9 @@ async function submitQuoteForm(event) {
     const issueLocation = getSelectedOptionText(issueLocationSelect);
     const issueType = getSelectedOptionText(issueTypeSelect);
     const problemDescription = problemDescriptionField?.value.trim() || '';
-    const apiUrl = `${getApiBaseUrl()}/api/send-quote`;
+    const apiUrl = getSendQuoteUrl();
 
-    if (!getApiBaseUrl()) {
+    if (!apiUrl) {
         window.alert('Missing API URL. Please contact the site administrator.');
         return;
     }
