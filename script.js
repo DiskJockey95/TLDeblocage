@@ -285,7 +285,7 @@ async function submitQuoteForm(event) {
     const apiUrl = `${getApiBaseUrl()}/api/send-quote`;
 
     if (!getApiBaseUrl()) {
-        window.alert('Missing API URL. Set the send-quote-url meta tag to your Railway public URL.');
+        window.alert('Missing API URL. Please contact the site administrator.');
         return;
     }
 
