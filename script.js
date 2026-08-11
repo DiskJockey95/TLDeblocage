@@ -16,15 +16,22 @@ const emailField = document.querySelector('#email');
 const apiBaseUrlMeta = document.querySelector('meta[name="send-quote-url"]');
 const serviceItems = document.querySelectorAll('.services-list li');
 const serviceImage = document.querySelector('#service-list-image');
+const reviewGrid = document.querySelector('#review-grid');
 const serviceRotationDelayMs = 5000;
 const resultCards = document.querySelectorAll('.results-grid .comparison-card');
 const resultRotationDelayMs = 5000;
+const sectionMenuToggle = document.querySelector('.menu-toggle');
+const sectionMenu = document.querySelector('.section-menu');
+const sectionMenuLinks = document.querySelectorAll('.section-menu a');
+const quoteCooldownMs = 10 * 60 * 1000;
+const quoteCooldownStorageKey = 'tldeblocage-last-quote-submission-at';
 
 let currentLanguage = 'fr';
 let activeServiceItem = null;
 let serviceRotationTimeoutId = null;
 let activeResultIndex = 0;
 let resultRotationTimeoutId = null;
+let reviewItems = [];
 
 const resultComparisons = [
     {
@@ -90,12 +97,91 @@ const resultComparisons = [
 ];
 
 function escapeHtml(value) {
-    return value
+    return String(value)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function getReviewsUrl() {
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:' || window.location.protocol === 'file:') {
+        return new URL('files/reviews.json', window.location.href).href;
+    }
+
+    return 'files/reviews.json';
+}
+
+function renderReviewGrid() {
+    if (!reviewGrid) {
+        return;
+    }
+
+    if (!reviewItems.length) {
+        reviewGrid.innerHTML = '<p class="review-empty">No reviews are available right now.</p>';
+        return;
+    }
+
+    reviewGrid.innerHTML = reviewItems.map((review) => {
+        const rating = Number(review.rating) || 0;
+        const safeRating = Math.max(0, Math.min(5, rating));
+        const stars = '★★★★★'.slice(0, safeRating);
+        const reviewText = currentLanguage === 'fr' ? review['message-fr'] : review['message-en'];
+        const reviewerName = review.user || '';
+
+        return `
+            <div class="testimonial-card">
+                <div class="rating-row">
+                    <div class="stars" aria-label="${safeRating} out of 5 stars">${escapeHtml(stars)}</div>
+                    <span class="rating-score">${safeRating}/5</span>
+                </div>
+                <blockquote>${escapeHtml(reviewText)}</blockquote>
+                <span>— ${escapeHtml(reviewerName)}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadReviews() {
+    if (!reviewGrid) {
+        return;
+    }
+
+    const reviewUrls = [getReviewsUrl()];
+    const apiBaseUrl = getApiBaseUrl();
+
+    if (apiBaseUrl) {
+        reviewUrls.push(`${apiBaseUrl}/files/reviews.json`);
+    }
+
+    try {
+        let response = null;
+
+        for (const reviewUrl of reviewUrls) {
+            try {
+                response = await fetch(reviewUrl, { cache: 'no-store' });
+
+                if (response.ok) {
+                    break;
+                }
+            } catch (error) {
+                response = null;
+            }
+        }
+
+        if (!response || !response.ok) {
+            throw new Error('Unable to load reviews from any configured source');
+        }
+
+        const data = await response.json();
+        reviewItems = Array.isArray(data) ? data : [];
+    } catch (error) {
+        console.error('Failed to load reviews', error);
+        reviewItems = [];
+    }
+
+    renderReviewGrid();
 }
 
 function updateServiceImage(item) {
@@ -214,6 +300,55 @@ function setActiveServiceItem(item) {
     updateServiceImage(item);
 }
 
+function openSectionMenu() {
+    if (!sectionMenuToggle || !sectionMenu) {
+        return;
+    }
+
+    sectionMenu.classList.add('is-open');
+    sectionMenuToggle.setAttribute('aria-expanded', 'true');
+}
+
+function closeSectionMenu() {
+    if (!sectionMenuToggle || !sectionMenu) {
+        return;
+    }
+
+    sectionMenu.classList.remove('is-open');
+    sectionMenuToggle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleSectionMenu() {
+    if (!sectionMenuToggle || !sectionMenu) {
+        return;
+    }
+
+    if (sectionMenu.classList.contains('is-open')) {
+        closeSectionMenu();
+        return;
+    }
+
+    openSectionMenu();
+}
+
+function getSectionScrollTarget(sectionElement) {
+    if (!sectionElement) {
+        return null;
+    }
+
+    return sectionElement.querySelector('h1, h2, h3') || sectionElement;
+}
+
+function getStickyHeaderOffset() {
+    const siteHeader = document.querySelector('.site-header');
+
+    if (!siteHeader) {
+        return 0;
+    }
+
+    return siteHeader.getBoundingClientRect().height + 12;
+}
+
 function applyLanguage(lang) {
     currentLanguage = lang;
     document.documentElement.lang = lang;
@@ -241,6 +376,7 @@ function applyLanguage(lang) {
     }
 
     setActiveResultComparison(activeResultIndex);
+    renderReviewGrid();
 }
 
 function updateProblemDescriptionRequirement() {
@@ -288,6 +424,41 @@ function getSendQuoteUrl() {
     return apiBaseUrl.endsWith('/api/send-quote') ? apiBaseUrl : `${apiBaseUrl}/api/send-quote`;
 }
 
+function getLastQuoteSubmissionAt() {
+    try {
+        const storedValue = window.localStorage.getItem(quoteCooldownStorageKey);
+        const parsedValue = Number(storedValue);
+
+        return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+function setLastQuoteSubmissionAt(timestamp) {
+    try {
+        window.localStorage.setItem(quoteCooldownStorageKey, String(timestamp));
+    } catch (error) {
+        // Ignore storage failures and fall back to server-side enforcement.
+    }
+}
+
+function getQuoteCooldownRemainingMs() {
+    const lastSubmissionAt = getLastQuoteSubmissionAt();
+
+    if (!lastSubmissionAt) {
+        return 0;
+    }
+
+    const remainingMs = quoteCooldownMs - (Date.now() - lastSubmissionAt);
+    return remainingMs > 0 ? remainingMs : 0;
+}
+
+function formatCooldownMessage(remainingMs) {
+    const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+    return `Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'} before sending another quote request.`;
+}
+
 async function submitQuoteForm(event) {
     event.preventDefault();
 
@@ -301,9 +472,15 @@ async function submitQuoteForm(event) {
     const issueType = getSelectedOptionText(issueTypeSelect);
     const problemDescription = problemDescriptionField?.value.trim() || '';
     const apiUrl = getSendQuoteUrl();
+    const cooldownRemainingMs = getQuoteCooldownRemainingMs();
 
     if (!apiUrl) {
         window.alert('Missing API URL. Please contact the site administrator.');
+        return;
+    }
+
+    if (cooldownRemainingMs > 0) {
+        window.alert(formatCooldownMessage(cooldownRemainingMs));
         return;
     }
 
@@ -341,6 +518,7 @@ async function submitQuoteForm(event) {
             throw new Error(errorPayload.error || 'Unable to send email');
         }
 
+        setLastQuoteSubmissionAt(Date.now());
         window.alert('Your quote request has been sent.');
         quoteForm.reset();
         updateProblemDescriptionRequirement();
@@ -368,6 +546,50 @@ if (quoteForm) {
     quoteForm.addEventListener('submit', submitQuoteForm);
 }
 
+if (sectionMenuToggle) {
+    sectionMenuToggle.addEventListener('click', toggleSectionMenu);
+}
+
+sectionMenuLinks.forEach((link) => {
+    link.addEventListener('click', (event) => {
+        const targetId = link.getAttribute('href');
+        const targetElement = targetId ? document.querySelector(targetId) : null;
+        const scrollTarget = getSectionScrollTarget(targetElement);
+
+        if (!scrollTarget) {
+            return;
+        }
+
+        event.preventDefault();
+        const targetTop = scrollTarget.getBoundingClientRect().top + window.scrollY;
+        const offsetTop = getStickyHeaderOffset();
+
+        window.scrollTo({
+            top: Math.max(0, targetTop - offsetTop),
+            behavior: 'smooth',
+        });
+        closeSectionMenu();
+    });
+});
+
+document.addEventListener('click', (event) => {
+    if (!sectionMenu || !sectionMenuToggle || !sectionMenu.classList.contains('is-open')) {
+        return;
+    }
+
+    if (sectionMenu.contains(event.target) || sectionMenuToggle.contains(event.target)) {
+        return;
+    }
+
+    closeSectionMenu();
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        closeSectionMenu();
+    }
+});
+
 serviceItems.forEach((item) => {
     item.setAttribute('role', 'button');
     item.tabIndex = 0;
@@ -392,6 +614,7 @@ scheduleServiceRotation();
 
 setActiveResultComparison(0);
 scheduleResultRotation();
+loadReviews();
 
 applyLanguage('fr');
 updateProblemDescriptionRequirement();

@@ -5,6 +5,8 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const quoteCooldownMs = 10 * 60 * 1000;
+const recentQuoteSubmissions = new Map();
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
     .split(',')
     .map((origin) => origin.trim())
@@ -28,6 +30,36 @@ function buildMapsLink(address, postalCode) {
     }
 
     return `https://www.google.com/maps/place/${encodedParts.join(',')}`;
+}
+
+function normalizeSubmissionKey(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getRecentSubmissionAgeMs(submissionKey) {
+    const submittedAt = recentQuoteSubmissions.get(submissionKey);
+
+    if (!submittedAt) {
+        return null;
+    }
+
+    const ageMs = Date.now() - submittedAt;
+
+    if (ageMs >= quoteCooldownMs) {
+        recentQuoteSubmissions.delete(submissionKey);
+        return null;
+    }
+
+    return ageMs;
+}
+
+function markSubmissionAsSent(submissionKey) {
+    recentQuoteSubmissions.set(submissionKey, Date.now());
+}
+
+function buildCooldownErrorMessage(remainingMs) {
+    const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+    return `A quote request was already sent recently. Please wait ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'} before submitting another one.`;
 }
 
 function buildEmailMessage(formData) {
@@ -124,6 +156,7 @@ app.post('/api/send-quote', async (request, response) => {
     const formData = request.body || {};
     const requiredFields = ['fullName', 'phoneNumber', 'email', 'address', 'postalCode', 'issueLocation', 'issueType'];
     const missingField = requiredFields.find((field) => !String(formData[field] || '').trim());
+    const submissionKey = normalizeSubmissionKey(formData.email);
 
     console.log('Received quote request', {
         requestId: request.headers['x-railway-request-id'] || null,
@@ -140,6 +173,20 @@ app.post('/api/send-quote', async (request, response) => {
     if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM) {
         response.status(500).json({ error: 'Resend environment variables are not configured.' });
         return;
+    }
+
+    if (submissionKey) {
+        const ageMs = getRecentSubmissionAgeMs(submissionKey);
+
+        if (ageMs !== null) {
+            const remainingMs = quoteCooldownMs - ageMs;
+            response.setHeader('Retry-After', String(Math.ceil(remainingMs / 1000)));
+            response.status(429).json({
+                error: buildCooldownErrorMessage(remainingMs),
+                retryAfterMs: remainingMs,
+            });
+            return;
+        }
     }
 
     const subject = `${formData.issueTypeLabel || formData.issueType} - ${formData.issueLocationLabel || formData.issueLocation}`;
@@ -166,6 +213,9 @@ app.post('/api/send-quote', async (request, response) => {
         });
 
         console.log('Mail sent successfully');
+        if (submissionKey) {
+            markSubmissionAsSent(submissionKey);
+        }
         response.json({ ok: true });
     } catch (error) {
         console.error('Resend send failed', error);
