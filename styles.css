@@ -328,11 +328,35 @@ body {
 }
 
 .quote-form-card {
-    max-width: 980px;
+    max-width: 1100px;
     margin: -1.2rem auto 0;
     padding: 1.25rem;
     position: relative;
     z-index: 2;
+}
+
+.intro-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1rem 1.25rem 0.25rem;
+}
+
+.intro-section-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1.25rem;
+    box-shadow: 0 7px 20px rgba(15, 39, 68, 0.06);
+    border: 1px solid #e6edf5;
+}
+
+.intro-copy {
+    display: grid;
+    gap: 0.9rem;
+    color: var(--muted);
+}
+
+.intro-copy p {
+    margin: 0;
 }
 
 .form-intro {
@@ -422,7 +446,7 @@ body {
 }
 
 .services-list-wrap {
-    max-width: 760px;
+    max-width: 1100px;
     margin: 0 auto;
 }
 
@@ -1049,6 +1073,7 @@ footer {
     }
 
     .quote-form-card,
+    .intro-section,
     .services-section,
     .service-camera-section,
     .results-section,
