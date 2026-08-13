@@ -580,23 +580,16 @@ body {
 }
 
 .icon-price::before {
-    content: "";
+    content: "$";
     position: absolute;
-    inset: 10px 8px;
-    border: 2.5px solid var(--blue);
-    border-radius: 10px 10px 6px 6px;
-}
-
-.icon-price::after {
-    content: "";
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-left: 2.5px solid var(--blue);
-    border-bottom: 2.5px solid var(--blue);
-    left: 18px;
-    top: 15px;
-    transform: rotate(-45deg);
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--blue);
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    font-family: inherit;
 }
 
 .icon-shield::before {
